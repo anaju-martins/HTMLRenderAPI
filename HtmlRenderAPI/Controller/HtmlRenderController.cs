@@ -1,29 +1,45 @@
-﻿using HtmlRenderAPI.Services;
-using HtmlRenderAPI.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using HtmlRenderAPI.Services; 
 
-namespace HtmlRenderAPI.Controller
+namespace HtmlRenderAPI.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class HtmlRenderController : ControllerBase
+    public class RenderController : ControllerBase
     {
-        private readonly HtmlRenderService _service; //injetando classe service 
+        private readonly HtmlRenderService _htmlRenderService;
+        private readonly ILogger<RenderController> _logger;
 
-        public HtmlRenderController(HtmlRenderService service)
+        public RenderController(HtmlRenderService htmlRenderService, ILogger<RenderController> logger)
         {
-            _service = service;  //armazenando o que foi injetado para usando no post abaixo
+            _htmlRenderService = htmlRenderService;
+            _logger = logger;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] HtmlRequestModel req)
+        [HttpPost] 
+        public async Task<IActionResult> RenderHtml([FromBody] RenderRequest request)
         {
-            if (string.IsNullOrWhiteSpace(req.HtmlContent))
-                return BadRequest("HTML content is required.");
+            if (string.IsNullOrEmpty(request.Html))
+            {
+                return BadRequest("HTML content cannot be empty.");
+            }
 
-            var base64Image = await _service.ConvertHtmlToImage(req.HtmlContent); //chamando a função que foi criada no service
-            return Ok(new {ImageBase64 = base64Image}); //montando resposta json com o base64 gerado na função
+            try
+            {
+                string base64Output = await _htmlRenderService.ConvertHtmlToFormattedOutput(request.Html, request.Format);
+                return Ok(new { Base64Output = base64Output });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rendering HTML.");
+                return StatusCode(500, "An error occurred during HTML rendering.");
+            }
         }
     }
 
+    public class RenderRequest
+    {
+        public string Html { get; set; }
+        public OutputFormat Format { get; set; } = OutputFormat.Jpeg; 
+    }
 }

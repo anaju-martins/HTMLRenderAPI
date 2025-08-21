@@ -11,12 +11,22 @@ namespace HtmlRenderAPI
             var builder = WebApplication.CreateBuilder(args);
 
 
+            builder.Services.AddSingleton<HtmlRenderService>(); //instanciado apenas uma vez
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddScoped<HtmlRenderService>();
+
+            // Program.cs
+            builder.Services.AddCors(opts =>
+            {
+                opts.AddDefaultPolicy(policy =>
+                  policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+            });
 
             var app = builder.Build();
+            app.UseCors();
 
           
             if (app.Environment.IsDevelopment())
